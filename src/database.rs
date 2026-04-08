@@ -38,14 +38,14 @@ pub(crate) fn remove_clip(conn: &Connection, id: u32) -> rusqlite::Result<()> {
 }
 
 // Get all clips from the database
-pub(crate) fn get_clips(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+pub(crate) fn get_clips(conn: &Connection) -> rusqlite::Result<Vec<(u32, String)>> {
     let mut stmt = conn.prepare("SELECT id, content FROM clips")?;
     let mut rows = stmt.query([])?;
-    let mut clips = HashMap::new();
+    let mut clips = Vec::new();
     while let Some(row) = rows.next()? {
         let id: u32 = row.get(0)?;
         let content: String = row.get(1)?;
-        clips.insert(id, content);
+        clips.push((id, content));
     }
     Ok(clips)
 }
