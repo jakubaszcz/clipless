@@ -1,4 +1,6 @@
 mod database;
+
+use std::collections::HashMap;
 use eframe::{egui, App, Frame};
 use rusqlite::Connection;
 use egui::ViewportCommand;
@@ -53,13 +55,34 @@ impl App for MyApp {
         ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Clipless");
-            ui.label("Ctrl + Alt + C : save selected text");
-            ui.label("Ctrl + Alt + D : toggle window");
+            if let Ok(clips) = database::get_clips(&self.connection) {
+                for (id, content) in clips {
+                    clip_box(ui, id, &content, &self.connection);
+                }
+            }
         });
 
         ctx.request_repaint();
     }
+}
+
+fn clip_box(ui: &mut egui::Ui, id: u32, text: &str, connection: &Connection) {
+    egui::Frame::group(ui.style())
+        .inner_margin(egui::Margin::same(8))
+        .show(ui, |ui| {
+            ui.vertical(|ui| {
+                ui.label(text);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Copy").clicked() {
+                        ui.ctx().copy_text(text.to_string());
+                    }
+                    if ui.button("Delete").clicked() {
+                        database::remove_clip(&connection, id).unwrap();
+                    }
+                })
+            });
+        });
 }
 
 fn main() -> eframe::Result<()> {
