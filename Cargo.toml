@@ -7,4 +7,5 @@ edition = "2024"
 global-hotkey = "0.7.0"
 winit = "0.30"
 selection = "1.2.0"
+eframe = "0.31.0"
 rusqlite = { version = "0.39", features = ["bundled"] }
