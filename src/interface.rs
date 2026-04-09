@@ -1,5 +1,5 @@
 ﻿use eframe::{egui, App, Frame};
-use eframe::egui::{Color32, ViewportCommand};
+use eframe::egui::{Color32, Context, PopupCloseBehavior as OtherPopupCloseBehavior, ViewportCommand};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 use rusqlite::Connection;
 use crate::{database, selected_text};
@@ -49,27 +49,10 @@ pub(crate) fn handle_input(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-fn modal_box(ui: &mut egui::Ui, id: u32, text: &str, connection: &Connection) {
-    egui::Frame::popup(ui.style())
-        .show(ui, |ui| {
-           ui.label(text);
-            ui.vertical_centered(|ui| {
-                if ui.button("Copy").clicked() {
-                    ui.ctx().copy_text(text.to_string());
-                    ui.close_menu()
-                }
-                if ui.button("Delete").clicked() {
-                    database::remove_clip(&connection, id).unwrap();
-                    ui.close_menu()
-                }
-            })
-        }); 
-}
-
 // Define the clip box function
-fn clip_box(ui: &mut egui::Ui, id: u32, text: &str, connection: &Connection) {
+fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: &Connection) {
 
-    let max_text_length = 25;
+    let max_text_length = 250;
 
     let display_text = if text.chars().count() > max_text_length {
         format!("{}...", text.chars().take(max_text_length).collect::<String>())
@@ -78,9 +61,10 @@ fn clip_box(ui: &mut egui::Ui, id: u32, text: &str, connection: &Connection) {
     };
 
     egui::Frame::group(ui.style())
-        .inner_margin(egui::Margin::same(8))
+        .inner_margin(egui::Margin::same(6))
         .show(ui, |ui| {
             ui.vertical(|ui| {
+                ui.set_min_width(ui.available_width());
                 ui.label(display_text);
 
                 ui.horizontal(|ui| {
@@ -89,22 +73,6 @@ fn clip_box(ui: &mut egui::Ui, id: u32, text: &str, connection: &Connection) {
                     }
                     if ui.button("Delete").clicked() {
                         database::remove_clip(&connection, id).unwrap();
-                    }
-                    if text.len() > max_text_length {
-
-                        let modal_id = egui::Id::new(("modal", id));
-
-                        let mut is_open = ui.data(|d| d.get_temp::<bool>(modal_id).unwrap_or(false));
-
-                        if ui.button("Show").clicked() {
-                            is_open = true;
-                        }
-
-                        if is_open {
-                            modal_box(ui, id, text, connection);
-                        }
-
-                        ui.data_mut(|d| d.insert_temp(modal_id, is_open));
                     }
                 })
             });
@@ -120,13 +88,17 @@ impl App for MyApp {
         ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            if let Ok(clips) = database::get_clips(&self.connection) {
-                for (id, content) in clips {
-                    clip_box(ui, id, &content, &self.connection);
+            ui.heading("Store Clipboard with CTRL + LALT + C");
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                if let Ok(clips) = database::get_clips(&self.connection) {
+                    for (id, content) in clips {
+                        clip_box(ui, ctx, id, &content, &self.connection);
+                    }
                 }
-            }
+            })
         });
 
         ctx.request_repaint();
     }
 }
+
