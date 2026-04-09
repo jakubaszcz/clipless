@@ -2,6 +2,10 @@ mod database;
 mod interface;
 mod selected_text;
 
+use std::default::Default;
+use eframe::egui;
+use eframe::egui::WindowLevel;
+use eframe::epaint::Pos2;
 use global_hotkey::GlobalHotKeyManager;
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use crate::interface::MyApp;
@@ -36,12 +40,20 @@ fn main() -> eframe::Result<()> {
         manager.register(custom_app_hotkey).unwrap();
     }
 
+    // Options for the window
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_visible(false)
+            .with_taskbar(false)
+            .with_decorations(false),
+        ..Default::default()
+    };
 
     // Start listening for hotkey events & display the window
     {
         eframe::run_native(
             "Clipless",
-            eframe::NativeOptions::default(),
+            options,
             Box::new(|_cc| {
                 Ok(Box::new(MyApp {
                     connection,

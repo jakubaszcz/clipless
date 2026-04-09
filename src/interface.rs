@@ -35,16 +35,7 @@ pub(crate) fn handle_input(app: &mut MyApp, ctx: &egui::Context) {
             }
         }
         if _event.id == app.app_hot_key_id {
-            app.window_visibility = !app.window_visibility;
-
-            if app.window_visibility {
-                ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
-                ctx.send_viewport_cmd(ViewportCommand::Focus);
-                println!("window shown");
-            } else {
-                ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
-                println!("window hidden");
-            }
+            ctx.send_viewport_cmd(ViewportCommand::Focus);
         }
     }
 }
@@ -89,6 +80,7 @@ impl App for MyApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Store Clipboard with CTRL + LALT + C");
+            ui.label("Press CTRL + LALT + D to focus the window, do not close the app, if it happen it will shut down. Just turn the executable back.");
             egui::ScrollArea::vertical().show(ui, |ui| {
                 if let Ok(clips) = database::get_clips(&self.connection) {
                     for (id, content) in clips {
