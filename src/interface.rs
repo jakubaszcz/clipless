@@ -9,7 +9,7 @@ pub(crate) struct MyApp {
     pub(crate) connection: Connection,
     pub(crate) copy_hot_key_id: u32,
     pub(crate) app_hot_key_id: u32,
-    pub(crate) window_visibility: bool,
+    pub(crate) clip_modal: Option<u32>,
 }
 
 // Define the handle_input function
@@ -41,7 +41,7 @@ pub(crate) fn handle_input(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // Define the clip box function
-fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: &Connection) {
+fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: &Connection, clip_modal: &mut Option<u32>) {
 
     let max_text_length = 250;
 
@@ -65,9 +65,40 @@ fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: 
                     if ui.button("Delete").clicked() {
                         database::remove_clip(&connection, id).unwrap();
                     }
+
+                    if text.chars().count() > max_text_length {
+                        if ui.button("Expand").clicked() {
+                            *clip_modal = Some(id)
+                        }
+                    }
                 })
             });
         });
+
+    // Modal box
+    if *clip_modal == Some(id) {
+        modal_box(ctx, id, text, connection, clip_modal);
+    }
+}
+
+// Define the modal box function
+fn modal_box(ctx: &Context, id: u32, text: &str, connection: &Connection ,clip_modal: &mut Option<u32>) {
+    if egui::Modal::new(egui::Id::new("my_modal"))
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.label(text);
+                ui.horizontal(|ui| {
+                    if ui.button("Copy").clicked() {
+                        ui.ctx().copy_text(text.to_string());
+                    }
+                    if ui.button("Delete").clicked() {
+                        database::remove_clip(&connection, id).unwrap();
+                    }
+                    if ui.button("Close").clicked() {
+                        *clip_modal = None;
+                    }})
+            });
+    }).should_close() { *clip_modal = None; }
 }
 
 // Implement the App trait
@@ -84,7 +115,7 @@ impl App for MyApp {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 if let Ok(clips) = database::get_clips(&self.connection) {
                     for (id, content) in clips {
-                        clip_box(ui, ctx, id, &content, &self.connection);
+                        clip_box(ui, ctx, id, &content, &self.connection, &mut self.clip_modal);
                     }
                 }
             })

@@ -60,7 +60,7 @@ fn main() -> eframe::Result<()> {
                     connection,
                     copy_hot_key_id,
                     app_hot_key_id,
-                    window_visibility: false,
+                    clip_modal: None,
                 }))
             }),
         )
