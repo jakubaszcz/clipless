@@ -1,7 +1,7 @@
-#![windows_subsystem = "windows"]
 mod database;
 mod interface;
 mod selected_text;
+mod clipboard;
 
 use std::default::Default;
 use eframe::egui;

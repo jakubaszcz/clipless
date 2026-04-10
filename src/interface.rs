@@ -1,8 +1,9 @@
 ﻿use eframe::{egui, App, Frame};
-use eframe::egui::{Color32, Context, PopupCloseBehavior as OtherPopupCloseBehavior, ViewportCommand};
+use eframe::egui::{Context, ViewportCommand};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 use rusqlite::Connection;
-use crate::{database, selected_text};
+use chrono::{Utc, DateTime};
+use crate::{clipboard, database, selected_text};
 
 // Define the app struct
 pub(crate) struct MyApp {
@@ -42,14 +43,14 @@ pub(crate) fn handle_input(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // Define the clip box function
-fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: &Connection, clip_modal: &mut Option<u32>) {
+fn clip_box(ui: &mut egui::Ui, ctx : &Context, clip: clipboard::Clipboard, connection: &Connection, clip_modal: &mut Option<u32>) {
 
     let max_text_length = 250;
 
-    let display_text = if text.chars().count() > max_text_length {
-        format!("{}...", text.chars().take(max_text_length).collect::<String>())
+    let display_text = if clip.content.chars().count() > max_text_length {
+        format!("{}...", clip.content.chars().take(max_text_length).collect::<String>())
     } else {
-        text.to_string()
+        clip.content.to_string()
     };
 
     egui::Frame::group(ui.style())
@@ -61,39 +62,40 @@ fn clip_box(ui: &mut egui::Ui, ctx : &Context, id: u32, text: &str, connection: 
 
                 ui.horizontal(|ui| {
                     if ui.button("Copy").clicked() {
-                        ui.ctx().copy_text(text.to_string());
+                        ui.ctx().copy_text(clip.content.to_string());
                     }
                     if ui.button("Delete").clicked() {
-                        database::remove_clip(&connection, id).unwrap();
+                        database::remove_clip(&connection, clip.id).unwrap();
                     }
 
-                    if text.chars().count() > max_text_length {
+                    if clip.content.chars().count() > max_text_length {
                         if ui.button("Expand").clicked() {
-                            *clip_modal = Some(id)
+                            *clip_modal = Some(clip.id)
                         }
                     }
+                    ui.label(DateTime::<Utc>::from_timestamp(clip.timestamp, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string());
                 })
             });
         });
 
     // Modal box
-    if *clip_modal == Some(id) {
-        modal_box(ctx, id, text, connection, clip_modal);
+    if *clip_modal == Some(clip.id) {
+        modal_box(ctx, clip, connection, clip_modal);
     }
 }
 
 // Define the modal box function
-fn modal_box(ctx: &Context, id: u32, text: &str, connection: &Connection ,clip_modal: &mut Option<u32>) {
+fn modal_box(ctx: &Context, clip: clipboard::Clipboard, connection: &Connection ,clip_modal: &mut Option<u32>) {
     if egui::Modal::new(egui::Id::new("my_modal"))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.label(text);
+                ui.label(clip.content.to_string());
                 ui.horizontal(|ui| {
                     if ui.button("Copy").clicked() {
-                        ui.ctx().copy_text(text.to_string());
+                        ui.ctx().copy_text(clip.content.to_string());
                     }
                     if ui.button("Delete").clicked() {
-                        database::remove_clip(&connection, id).unwrap();
+                        database::remove_clip(&connection, clip.id).unwrap();
                     }
                     if ui.button("Close").clicked() {
                         *clip_modal = None;
@@ -120,7 +122,7 @@ impl App for MyApp {
             });
             egui::ScrollArea::vertical().show(ui, |ui| {
 
-                let query: Vec<(u32, String)>;
+                let query: Vec<clipboard::Clipboard>;
 
                 // If the query is longer than 3 characters, fetch the clips from the database, otherwise get all clips
                 if self.search_query.len() > 3 {
@@ -135,8 +137,8 @@ impl App for MyApp {
                 }
 
                 // Display the clips
-                for (id, content) in query {
-                    clip_box(ui, ctx, id, &content, &self.connection, &mut self.clip_modal);
+                for clips in query {
+                    clip_box(ui, ctx, clips, &self.connection, &mut self.clip_modal);
                 }
             })
         });
