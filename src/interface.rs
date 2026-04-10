@@ -6,6 +6,7 @@ use crate::{database, selected_text};
 
 // Define the app struct
 pub(crate) struct MyApp {
+    pub(crate) search_query: String,
     pub(crate) connection: Connection,
     pub(crate) copy_hot_key_id: u32,
     pub(crate) app_hot_key_id: u32,
@@ -112,11 +113,30 @@ impl App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Store Clipboard with CTRL + LALT + C");
             ui.label("Press CTRL + LALT + D to focus the window, do not close the app, if it happen it will shut down. Just turn the executable back.");
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.search_query).hint_text("Search up a clip...")
+                );
+            });
             egui::ScrollArea::vertical().show(ui, |ui| {
-                if let Ok(clips) = database::get_clips(&self.connection) {
-                    for (id, content) in clips {
-                        clip_box(ui, ctx, id, &content, &self.connection, &mut self.clip_modal);
-                    }
+
+                let query: Vec<(u32, String)>;
+
+                // If the query is longer than 3 characters, fetch the clips from the database, otherwise get all clips
+                if self.search_query.len() > 3 {
+                    query = database::fetch_clips(&self.connection, &self.search_query).unwrap();
+                } else {
+                    query = database::get_clips(&self.connection).unwrap();
+                }
+
+                // If there are no clips, display a message
+                if query.is_empty() {
+                    ui.label("No clips found...");
+                }
+
+                // Display the clips
+                for (id, content) in query {
+                    clip_box(ui, ctx, id, &content, &self.connection, &mut self.clip_modal);
                 }
             })
         });

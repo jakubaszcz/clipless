@@ -57,6 +57,7 @@ fn main() -> eframe::Result<()> {
             options,
             Box::new(|_cc| {
                 Ok(Box::new(MyApp {
+                    search_query: String::new(),
                     connection,
                     copy_hot_key_id,
                     app_hot_key_id,

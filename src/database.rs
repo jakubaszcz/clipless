@@ -49,6 +49,19 @@ pub(crate) fn get_clips(conn: &Connection) -> rusqlite::Result<Vec<(u32, String)
     Ok(clips)
 }
 
+// Fetch clips from the database based on a search query
+pub(crate) fn fetch_clips(conn: &Connection, query: &str) -> rusqlite::Result<Vec<(u32, String)>> {
+    let mut stmt = conn.prepare("SELECT id, content FROM clips WHERE content LIKE ?1 ESCAPE '\\'")?;
+    let mut rows = stmt.query([format!("%{}%", query)])?;
+    let mut clips = Vec::new();
+    while let Some(row) = rows.next()? {
+        let id: u32 = row.get(0)?;
+        let content: String = row.get(1)?;
+        clips.push((id, content));
+    }
+    Ok(clips)
+}
+
 // Insert a new clip into the database
 pub(crate) fn insert_clip(conn: &Connection, content: &str) -> rusqlite::Result<()> {
     conn.execute("INSERT INTO clips (content) VALUES (?1)", [content])?;
