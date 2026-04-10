@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 mod database;
 mod interface;
 mod selected_text;

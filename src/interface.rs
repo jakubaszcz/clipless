@@ -44,7 +44,6 @@ pub(crate) fn handle_input(app: &mut MyApp, ctx: &egui::Context) {
 
 // Define the clip box function
 fn clip_box(ui: &mut egui::Ui, ctx : &Context, clip: clipboard::Clipboard, connection: &Connection, clip_modal: &mut Option<u32>) {
-
     let max_text_length = 250;
 
     let display_text = if clip.content.chars().count() > max_text_length {
@@ -58,11 +57,12 @@ fn clip_box(ui: &mut egui::Ui, ctx : &Context, clip: clipboard::Clipboard, conne
         .show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.set_min_width(ui.available_width());
-                ui.label(display_text);
 
+                ui.label(display_text);
                 ui.horizontal(|ui| {
                     if ui.button("Copy").clicked() {
                         ui.ctx().copy_text(clip.content.to_string());
+                        database::update_use_clip(connection, clip.id).unwrap();
                     }
                     if ui.button("Delete").clicked() {
                         database::remove_clip(&connection, clip.id).unwrap();
@@ -74,6 +74,10 @@ fn clip_box(ui: &mut egui::Ui, ctx : &Context, clip: clipboard::Clipboard, conne
                         }
                     }
                     ui.label(DateTime::<Utc>::from_timestamp(clip.timestamp, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string());
+                    if clip.use_clip > 0 {
+                        ui.separator();
+                        ui.label(format!("It has been copied {} times", clip.use_clip));
+                    }
                 })
             });
         });
@@ -93,13 +97,17 @@ fn modal_box(ctx: &Context, clip: clipboard::Clipboard, connection: &Connection 
                 ui.horizontal(|ui| {
                     if ui.button("Copy").clicked() {
                         ui.ctx().copy_text(clip.content.to_string());
+                        database::update_use_clip(connection, clip.id).unwrap();
                     }
                     if ui.button("Delete").clicked() {
                         database::remove_clip(&connection, clip.id).unwrap();
                     }
-                    if ui.button("Close").clicked() {
-                        *clip_modal = None;
-                    }})
+                    ui.label(DateTime::<Utc>::from_timestamp(clip.timestamp, 0).unwrap().format("%Y-%m-%d %H:%M:%S").to_string());
+                    if clip.use_clip > 0 {
+                        ui.separator();
+                        ui.label(format!("It has been copied {} times", clip.use_clip));
+                    }
+                })
             });
     }).should_close() { *clip_modal = None; }
 }
