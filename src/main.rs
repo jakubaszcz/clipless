@@ -42,9 +42,13 @@ fn main() -> eframe::Result<()> {
         manager.register(custom_app_hotkey).unwrap();
     }
 
+    // Icon
+    let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon/icon.png")).unwrap();
+
     // Options for the window
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_icon(icon)
             .with_visible(false)
             .with_taskbar(false)
             .with_decorations(false),
